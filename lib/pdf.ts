@@ -1,4 +1,4 @@
-import type { Consulta, Paciente, Venta, VentaItem } from "./types";
+import type { Consulta, Paciente, Receta, Venta, VentaItem } from "./types";
 
 const CLINIC = "Consultorio San Juan";
 
@@ -74,6 +74,54 @@ export async function descargarPlanTratamiento(paciente: Paciente, consulta: Con
   );
 
   doc.save(`plan-tratamiento-${paciente.nombre.replace(/\s+/g, "_")}-${consulta.fecha}.pdf`);
+}
+
+export async function descargarRecetaMedica(paciente: Paciente, receta: Receta) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF();
+  let y = 20;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text(CLINIC, 14, y);
+  y += 7;
+  doc.setFontSize(12);
+  doc.text("Receta médica", 14, y);
+  y += 10;
+  doc.setDrawColor(180);
+  doc.line(14, y, 196, y);
+  y += 9;
+
+  const line = (label: string, value: string | null) => {
+    doc.setFont("helvetica", "bold");
+    doc.text(label, 14, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(value || "—", 55, y);
+    y += 7;
+  };
+  line("Paciente:", paciente.nombre);
+  line("Fecha:", fmtDate(receta.fecha));
+  line("Médico:", receta.doctor_nombre);
+  y += 4;
+
+  const block = (title: string, text: string | null) => {
+    doc.setFont("helvetica", "bold");
+    doc.text(title, 14, y);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    const lines = doc.splitTextToSize(text || "—", 180);
+    doc.text(lines, 14, y);
+    y += lines.length * 6 + 7;
+  };
+  block("Diagnóstico", receta.diagnostico);
+  block("Tratamiento indicado", receta.tratamiento);
+  block("Medicamento", `${receta.medicamento}\nDosis: ${receta.dosis}\nFrecuencia: ${receta.frecuencia}\nDuración: ${receta.duracion}`);
+  block("Indicaciones", receta.indicaciones);
+
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text("Documento generado por el sistema interno de " + CLINIC + ".", 14, 285);
+  doc.save(`receta-${paciente.nombre.replace(/\s+/g, "_")}-${receta.fecha}.pdf`);
 }
 
 export async function descargarResumenExpediente(paciente: Paciente, consultas: Consulta[]) {

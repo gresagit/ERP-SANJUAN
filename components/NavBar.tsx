@@ -50,17 +50,17 @@ export default function NavBar({ profile }: { profile: Profile }) {
       </div>
 
       <nav className="mx-auto max-w-7xl border-t border-white/10 px-4 sm:px-6 lg:px-8">
-        <div className="flex gap-1 overflow-x-auto py-2">
+        <div className="flex justify-center gap-1 overflow-x-auto py-2">
           {TABS.map((t) => {
             const active = pathname?.startsWith(t.href);
             return (
               <Link
                 key={t.href}
                 href={t.href}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition ${
+                className={`relative whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition duration-200 after:absolute after:bottom-0 after:left-1/2 after:h-0.5 after:-translate-x-1/2 after:rounded-full after:bg-cyan-400 after:transition-all after:duration-200 ${
                   active
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-300 hover:bg-white/5 hover:text-white"
+                    ? "bg-white text-slate-900 shadow-sm after:w-8"
+                    : "text-slate-300 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white after:w-0 hover:after:w-4"
                 }`}
               >
                 {t.label}

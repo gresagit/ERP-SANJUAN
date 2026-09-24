@@ -6,8 +6,11 @@
 create extension if not exists "pgcrypto";
 
 do $$ begin
-  create type public.staff_role as enum ('admin','doctor','enfermera','farmacia','recepcion');
+  create type public.staff_role as enum ('admin','doctor','enfermera','fisioterapeuta','nutriologo','farmacia','recepcion');
 exception when duplicate_object then null; end $$;
+
+alter type public.staff_role add value if not exists 'fisioterapeuta';
+alter type public.staff_role add value if not exists 'nutriologo';
 
 -- ---------------------------------------------------------------------
 -- PROFILES: un registro por usuario de Supabase Auth (personal del consultorio)
@@ -65,8 +68,9 @@ create table if not exists public.pacientes (
 );
 alter table public.pacientes enable row level security;
 drop policy if exists "pacientes_staff_all" on public.pacientes;
-create policy "pacientes_staff_all" on public.pacientes
-  for all using (public.is_staff()) with check (public.is_staff());
+drop policy if exists "pacientes_staff_select" on public.pacientes;
+drop policy if exists "pacientes_staff_insert" on public.pacientes;
+drop policy if exists "pacientes_staff_update" on public.pacientes;
 
 -- ---------------------------------------------------------------------
 -- CONSULTAS (notas de evolución / expediente)
@@ -93,8 +97,66 @@ create table if not exists public.consultas (
 );
 alter table public.consultas enable row level security;
 drop policy if exists "consultas_staff_all" on public.consultas;
-create policy "consultas_staff_all" on public.consultas
-  for all using (public.is_staff()) with check (public.is_staff());
+drop policy if exists "consultas_staff_select" on public.consultas;
+drop policy if exists "consultas_doctor_insert" on public.consultas;
+drop policy if exists "consultas_staff_update" on public.consultas;
+
+-- ---------------------------------------------------------------------
+-- REFERRAL_REQUESTS (aceptación previa para especialistas y enfermería)
+-- ---------------------------------------------------------------------
+create table if not exists public.referral_requests (
+  id uuid primary key default gen_random_uuid(),
+  paciente_id uuid not null references public.pacientes(id) on delete cascade,
+  paciente_nombre text not null,
+  consulta_id uuid references public.consultas(id) on delete cascade,
+  sender_id uuid not null references public.profiles(id),
+  sender_nombre text not null,
+  recipient_id uuid not null references public.profiles(id),
+  recipient_nombre text not null,
+  area text not null,
+  motivo text not null,
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'rejected')),
+  created_at timestamptz not null default now(),
+  responded_at timestamptz
+);
+alter table public.referral_requests enable row level security;
+drop policy if exists "referrals_select_involved" on public.referral_requests;
+create policy "referrals_select_involved" on public.referral_requests
+  for select using (auth.uid() = sender_id or auth.uid() = recipient_id);
+drop policy if exists "referrals_insert_sender" on public.referral_requests;
+create policy "referrals_insert_sender" on public.referral_requests
+  for insert with check (public.is_staff() and auth.uid() = sender_id);
+drop policy if exists "referrals_update_recipient" on public.referral_requests;
+create policy "referrals_update_recipient" on public.referral_requests
+  for update using (auth.uid() = recipient_id)
+  with check (auth.uid() = recipient_id);
+
+create or replace function public.can_access_patient(target_patient_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.rol in ('admin', 'doctor')
+  ) or exists (
+    select 1 from public.referral_requests r
+    where r.paciente_id = target_patient_id
+      and r.recipient_id = auth.uid()
+      and r.status = 'accepted'
+  );
+$$;
+
+create policy "pacientes_staff_select" on public.pacientes
+  for select using (public.is_staff() and public.can_access_patient(id));
+create policy "pacientes_staff_insert" on public.pacientes
+  for insert with check (public.is_staff());
+create policy "pacientes_staff_update" on public.pacientes
+  for update using (public.is_staff() and public.can_access_patient(id)) with check (public.is_staff() and public.can_access_patient(id));
+
+create policy "consultas_staff_select" on public.consultas
+  for select using (public.is_staff() and public.can_access_patient(paciente_id));
+create policy "consultas_doctor_insert" on public.consultas
+  for insert with check (public.is_staff() and doctor_id = auth.uid());
+create policy "consultas_staff_update" on public.consultas
+  for update using (public.is_staff() and public.can_access_patient(paciente_id)) with check (public.is_staff() and public.can_access_patient(paciente_id));
 
 -- ---------------------------------------------------------------------
 -- RECETAS (indicaciones médicas por paciente)
@@ -106,6 +168,8 @@ create table if not exists public.recetas (
   doctor_id uuid references public.profiles(id),
   doctor_nombre text,
   fecha date not null default current_date,
+  diagnostico text not null default '',
+  tratamiento text not null default '',
   medicamento text not null,
   dosis text not null,
   frecuencia text not null,
@@ -113,10 +177,19 @@ create table if not exists public.recetas (
   indicaciones text,
   created_at timestamptz not null default now()
 );
+alter table public.recetas add column if not exists diagnostico text not null default '';
+alter table public.recetas add column if not exists tratamiento text not null default '';
 alter table public.recetas enable row level security;
 drop policy if exists "recetas_staff_all" on public.recetas;
-create policy "recetas_staff_all" on public.recetas
-  for all using (public.is_staff()) with check (public.is_staff());
+drop policy if exists "recetas_staff_select" on public.recetas;
+drop policy if exists "recetas_doctor_insert" on public.recetas;
+drop policy if exists "recetas_doctor_update" on public.recetas;
+create policy "recetas_staff_select" on public.recetas
+  for select using (public.is_staff() and public.can_access_patient(paciente_id));
+create policy "recetas_doctor_insert" on public.recetas
+  for insert with check (public.is_staff() and doctor_id = auth.uid());
+create policy "recetas_doctor_update" on public.recetas
+  for update using (public.is_staff() and doctor_id = auth.uid()) with check (public.is_staff() and doctor_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- CITAS (agenda)
@@ -192,6 +265,7 @@ create policy "venta_items_staff_all" on public.venta_items
 alter publication supabase_realtime add table public.pacientes;
 alter publication supabase_realtime add table public.consultas;
 alter publication supabase_realtime add table public.recetas;
+alter publication supabase_realtime add table public.referral_requests;
 alter publication supabase_realtime add table public.citas;
 alter publication supabase_realtime add table public.medicamentos;
 alter publication supabase_realtime add table public.ventas;

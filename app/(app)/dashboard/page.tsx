@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import type { Cita, Consulta, Profile } from "@/lib/types";
+import type { Cita, Consulta, Profile, ReferralRequest } from "@/lib/types";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -19,6 +19,7 @@ export default function DashboardPage() {
   const [citasHoy, setCitasHoy] = useState<Cita[]>([]);
   const [canalizados, setCanalizados] = useState<(Consulta & { paciente_nombre?: string })[]>([]);
   const [tareasEnfermeria, setTareasEnfermeria] = useState<(Consulta & { paciente_nombre?: string })[]>([]);
+  const [referrals, setReferrals] = useState<ReferralRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function load() {
@@ -27,6 +28,14 @@ export default function DashboardPage() {
     const { data: prof } = await supabase.from("profiles").select("*").eq("id", userData.user.id).single();
     setProfile(prof as Profile);
     if (!prof) return;
+
+    const { data: referralData } = await supabase
+      .from("referral_requests")
+      .select("*")
+      .eq("recipient_id", userData.user.id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+    setReferrals((referralData as ReferralRequest[]) || []);
 
     const { data: citas } = await supabase
       .from("citas")
@@ -64,6 +73,7 @@ export default function DashboardPage() {
       .channel("dashboard-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "citas" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "consultas" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "referral_requests" }, load)
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -79,11 +89,23 @@ export default function DashboardPage() {
       .eq("id", consultaId);
   }
 
+  async function responderCanalizacion(request: ReferralRequest, status: "accepted" | "rejected") {
+    const { error } = await supabase
+      .from("referral_requests")
+      .update({ status, responded_at: new Date().toISOString() })
+      .eq("id", request.id);
+    if (error) return;
+    if (status === "accepted" && request.consulta_id) {
+      await supabase.from("consultas").update({ canaliza_estado: "aceptado" }).eq("id", request.consulta_id);
+    }
+    await load();
+  }
+
   if (loading || !profile) return <p className="text-sm text-slate-600">Cargando…</p>;
 
   const stats = [
     { label: "Citas hoy", value: String(citasHoy.length), accent: "from-cyan-500 to-sky-600" },
-    { label: "Canalizaciones", value: String(canalizados.length), accent: "from-violet-500 to-indigo-600" },
+    { label: "Solicitudes", value: String(referrals.length), accent: "from-violet-500 to-indigo-600" },
     { label: "Tareas enfermería", value: String(tareasEnfermeria.length), accent: "from-amber-400 to-orange-500" },
     { label: "Rol", value: profile.rol, accent: "from-emerald-500 to-teal-600" },
   ];
@@ -173,6 +195,23 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
+
+      {referrals.length > 0 && (
+        <section className="card border-violet-200 bg-violet-50/40">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div><h3 className="text-lg font-bold text-slate-800">Solicitudes de canalización</h3><p className="mt-1 text-sm text-slate-500">Revisa la solicitud antes de abrir el expediente y la receta.</p></div>
+            <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">{referrals.length} pendientes</span>
+          </div>
+          <div className="space-y-3">
+            {referrals.map((request) => (
+              <div key={request.id} className="flex flex-col gap-4 rounded-2xl border border-violet-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div><p className="font-semibold text-slate-800">{request.paciente_nombre}</p><p className="text-xs text-slate-500">De {request.sender_nombre} · Área: {request.area}</p><p className="mt-1 text-sm text-slate-600">{request.motivo || "Sin motivo especificado"}</p></div>
+                <div className="flex shrink-0 gap-2"><button className="btn-secondary" onClick={() => responderCanalizacion(request, "rejected")}>Rechazar</button><button className="btn" onClick={() => responderCanalizacion(request, "accepted")}>Aceptar y abrir expediente</button></div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {canalizados.length > 0 && (
         <section className="card">

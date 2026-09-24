@@ -61,6 +61,8 @@ export default function OnboardingPage() {
             <select value={rol} onChange={(e) => setRol(e.target.value as StaffRole)}>
               <option value="doctor">Doctor(a)</option>
               <option value="enfermera">Enfermero(a)</option>
+              <option value="fisioterapeuta">Fisioterapeuta</option>
+              <option value="nutriologo">Nutriólogo(a)</option>
               <option value="farmacia">Farmacia</option>
               <option value="recepcion">Recepción</option>
             </select>

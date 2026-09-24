@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ROLE_LABEL, type Consulta, type Paciente, type Profile, type Receta } from "@/lib/types";
-import { descargarPlanTratamiento, descargarResumenExpediente } from "@/lib/pdf";
+import { descargarPlanTratamiento, descargarRecetaMedica, descargarResumenExpediente } from "@/lib/pdf";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -17,7 +17,19 @@ function fmtDate(iso: string | null) {
   return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-const AREAS = ["Nutrición", "Fisioterapia", "Psicología", "Odontología", "Otra"];
+const AREAS = ["Nutrición", "Fisioterapia", "Enfermería", "Medicina general", "Otra"];
+
+function isClinical(profile: Profile | null) {
+  return profile?.rol === "doctor" || profile?.rol === "admin";
+}
+
+function roleMatchesArea(role: Profile["rol"], selectedArea: string) {
+  if (selectedArea === "Nutrición") return role === "nutriologo";
+  if (selectedArea === "Fisioterapia") return role === "fisioterapeuta";
+  if (selectedArea === "Enfermería") return role === "enfermera";
+  if (selectedArea === "Medicina general") return role === "doctor" || role === "admin";
+  return true;
+}
 
 export default function ExpedientePage() {
   const params = useParams();
@@ -40,7 +52,7 @@ export default function ExpedientePage() {
   const [area, setArea] = useState("");
   const [profesionalCanaliza, setProfesionalCanaliza] = useState("");
   const [motivoCanaliza, setMotivoCanaliza] = useState("");
-  const [receta, setReceta] = useState({ medicamento: "", dosis: "", frecuencia: "", duracion: "", indicaciones: "" });
+  const [receta, setReceta] = useState({ diagnostico: "", tratamiento: "", medicamento: "", dosis: "", frecuencia: "", duracion: "", indicaciones: "" });
   const [savingReceta, setSavingReceta] = useState(false);
 
   async function load() {
@@ -86,10 +98,15 @@ export default function ExpedientePage() {
 
   async function guardarConsulta(e: React.FormEvent) {
     e.preventDefault();
-    if (!profile) return;
+    if (!profile || !paciente) return;
     setSaving(true);
+    if (area && !profesionalCanaliza) {
+      setSaving(false);
+      alert("Selecciona al especialista que recibirá la canalización.");
+      return;
+    }
     const profCan = staff.find((p) => p.id === profesionalCanaliza);
-    await supabase.from("consultas").insert({
+    const { data: consulta, error } = await supabase.from("consultas").insert({
       paciente_id: pacienteId,
       doctor_id: profile.id,
       doctor_nombre: profile.nombre,
@@ -105,7 +122,27 @@ export default function ExpedientePage() {
       canaliza_profesional_nombre: profCan?.nombre || null,
       canaliza_motivo: motivoCanaliza || null,
       canaliza_estado: area ? "pendiente" : null,
-    });
+    }).select("id").single();
+    if (error || !consulta) {
+      setSaving(false);
+      alert("No se pudo guardar la nota. Revisa que la tabla de consultas esté configurada.");
+      return;
+    }
+    if (area && profCan) {
+      const { error: referralError } = await supabase.from("referral_requests").insert({
+        paciente_id: pacienteId,
+        paciente_nombre: paciente.nombre,
+        consulta_id: consulta.id,
+        sender_id: profile.id,
+        sender_nombre: profile.nombre,
+        recipient_id: profCan.id,
+        recipient_nombre: profCan.nombre,
+        area,
+        motivo: motivoCanaliza,
+        status: "pending",
+      });
+      if (referralError) alert("La nota se guardó, pero no se pudo crear la solicitud de canalización.");
+    }
     setSaving(false);
     setMotivo("");
     setExploracion("");
@@ -121,13 +158,18 @@ export default function ExpedientePage() {
     e.preventDefault();
     if (!profile) return;
     setSavingReceta(true);
-    await supabase.from("recetas").insert({
+    const { error } = await supabase.from("recetas").insert({
       paciente_id: pacienteId,
       doctor_id: profile.id,
       doctor_nombre: profile.nombre,
       ...receta,
     });
-    setReceta({ medicamento: "", dosis: "", frecuencia: "", duracion: "", indicaciones: "" });
+    if (error) {
+      alert("No se pudo guardar la receta. Revisa que la tabla de recetas esté configurada.");
+      setSavingReceta(false);
+      return;
+    }
+    setReceta({ diagnostico: "", tratamiento: "", medicamento: "", dosis: "", frecuencia: "", duracion: "", indicaciones: "" });
     setSavingReceta(false);
     await load();
   }
@@ -169,7 +211,7 @@ export default function ExpedientePage() {
         </div>
       </div>
 
-      {profile?.rol === "doctor" ? (
+      {isClinical(profile) ? (
         <div className="card">
           <h2 className="font-serif text-xl">Nueva nota de evolución</h2>
           <form onSubmit={guardarConsulta} className="space-y-3">
@@ -226,7 +268,7 @@ export default function ExpedientePage() {
                   <select value={profesionalCanaliza} onChange={(e) => setProfesionalCanaliza(e.target.value)}>
                     <option value="">Cualquiera del área</option>
                     {staff
-                      .filter((p) => p.id !== profile.id)
+                      .filter((p) => p.id !== profile?.id && roleMatchesArea(p.rol, area))
                       .map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.nombre} ({ROLE_LABEL[p.rol]})
@@ -257,7 +299,7 @@ export default function ExpedientePage() {
         </div>
       )}
 
-      {profile?.rol === "doctor" && (
+      {isClinical(profile) && (
         <div className="card">
           <div className="mb-5">
             <h2 className="font-serif text-xl text-slate-800">Nueva receta médica</h2>
@@ -265,6 +307,8 @@ export default function ExpedientePage() {
           </div>
           <form onSubmit={guardarReceta} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
+              <div className="field"><label>Diagnóstico</label><textarea required value={receta.diagnostico} onChange={(e) => setReceta({ ...receta, diagnostico: e.target.value })} placeholder="Diagnóstico que sustenta la receta" /></div>
+              <div className="field"><label>Tratamiento</label><textarea required value={receta.tratamiento} onChange={(e) => setReceta({ ...receta, tratamiento: e.target.value })} placeholder="Objetivo y plan de tratamiento" /></div>
               <div className="field"><label>Medicamento</label><input required value={receta.medicamento} onChange={(e) => setReceta({ ...receta, medicamento: e.target.value })} placeholder="Nombre y presentación" /></div>
               <div className="field"><label>Dosis</label><input required value={receta.dosis} onChange={(e) => setReceta({ ...receta, dosis: e.target.value })} placeholder="Ej. 500 mg" /></div>
               <div className="field"><label>Frecuencia</label><input required value={receta.frecuencia} onChange={(e) => setReceta({ ...receta, frecuencia: e.target.value })} placeholder="Ej. cada 8 horas" /></div>
@@ -281,7 +325,7 @@ export default function ExpedientePage() {
           <div><h2 className="font-serif text-xl text-slate-800">Recetas médicas</h2><p className="mt-1 text-sm text-slate-500">Historial de indicaciones prescritas.</p></div>
           <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-700">{recetas.length} recetas</span>
         </div>
-        {recetas.length ? <div className="space-y-3">{recetas.map((r) => <article key={r.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-bold text-slate-800">{r.medicamento}</p><p className="text-sm text-slate-600">{r.dosis} · {r.frecuencia} · {r.duracion}</p></div><p className="text-xs text-slate-500">{fmtDate(r.fecha)} · {r.doctor_nombre || "Médico"}</p></div>{r.indicaciones && <p className="mt-2 text-sm text-slate-600"><strong>Indicaciones:</strong> {r.indicaciones}</p>}</article>)}</div> : <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm text-slate-500">Sin recetas registradas todavía.</p>}
+        {recetas.length ? <div className="space-y-3">{recetas.map((r) => <article key={r.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-bold text-slate-800">{r.medicamento}</p><p className="text-sm text-slate-600">{r.dosis} · {r.frecuencia} · {r.duracion}</p><p className="mt-2 text-sm text-slate-600"><strong>Diagnóstico:</strong> {r.diagnostico || "—"}</p><p className="text-sm text-slate-600"><strong>Tratamiento:</strong> {r.tratamiento || "—"}</p></div><div className="flex shrink-0 flex-col items-start gap-2 sm:items-end"><p className="text-xs text-slate-500">{fmtDate(r.fecha)} · {r.doctor_nombre || "Médico"}</p><button className="btn-secondary" onClick={() => descargarRecetaMedica(paciente, r)}>Descargar receta</button></div></div>{r.indicaciones && <p className="mt-2 text-sm text-slate-600"><strong>Indicaciones:</strong> {r.indicaciones}</p>}</article>)}</div> : <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm text-slate-500">Sin recetas registradas todavía.</p>}
       </div>
 
       <div className="card">

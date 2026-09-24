@@ -1,4 +1,4 @@
-export type StaffRole = "admin" | "doctor" | "enfermera" | "farmacia" | "recepcion";
+export type StaffRole = "admin" | "doctor" | "enfermera" | "fisioterapeuta" | "nutriologo" | "farmacia" | "recepcion";
 
 export type Profile = {
   id: string;
@@ -48,12 +48,30 @@ export type Receta = {
   doctor_id: string | null;
   doctor_nombre: string | null;
   fecha: string;
+  diagnostico: string;
+  tratamiento: string;
   medicamento: string;
   dosis: string;
   frecuencia: string;
   duracion: string;
   indicaciones: string | null;
   created_at: string;
+};
+
+export type ReferralRequest = {
+  id: string;
+  paciente_id: string;
+  paciente_nombre: string;
+  consulta_id: string | null;
+  sender_id: string;
+  sender_nombre: string;
+  recipient_id: string;
+  recipient_nombre: string;
+  area: string;
+  motivo: string;
+  status: "pending" | "accepted" | "rejected";
+  created_at: string;
+  responded_at: string | null;
 };
 
 export type Cita = {
@@ -97,6 +115,8 @@ export const ROLE_LABEL: Record<StaffRole, string> = {
   admin: "Administrador(a)",
   doctor: "Doctor(a)",
   enfermera: "Enfermería",
+  fisioterapeuta: "Fisioterapia",
+  nutriologo: "Nutriología",
   farmacia: "Farmacia",
   recepcion: "Recepción",
 };
