@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { ROLE_LABEL, type Profile } from "@/lib/types";
+import { ROLE_LABEL, type AccessRequest, type Profile } from "@/lib/types";
 
 export default function EquipoPage() {
   const supabase = createClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [staff, setStaff] = useState<Profile[]>([]);
+  const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
 
   async function load() {
@@ -18,6 +19,8 @@ export default function EquipoPage() {
     }
     const { data } = await supabase.from("profiles").select("*").order("nombre");
     setStaff((data as Profile[]) || []);
+    const { data: requestData } = await supabase.from("access_requests").select("*").eq("status", "pending").order("created_at", { ascending: false });
+    setRequests((requestData as AccessRequest[]) || []);
   }
 
   useEffect(() => {
@@ -25,6 +28,7 @@ export default function EquipoPage() {
     const channel = supabase
       .channel("equipo-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "access_requests" }, load)
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -36,6 +40,27 @@ export default function EquipoPage() {
     if (!confirm("¿Eliminar a este miembro del equipo? Su cuenta de acceso seguirá existiendo; solo se borra su perfil.")) return;
     const { error } = await supabase.from("profiles").delete().eq("id", id);
     if (error) setMsg("No se pudo eliminar (solo un administrador puede hacerlo).");
+  }
+
+  async function resolverSolicitud(request: AccessRequest, status: "approved" | "rejected") {
+    if (!profile || profile.rol !== "admin") return;
+    if (status === "approved") {
+      const { error: profileError } = await supabase.from("profiles").insert({
+        id: request.user_id,
+        nombre: `${request.nombre} ${request.apellido}`.trim(),
+        apellido: request.apellido,
+        fecha_nacimiento: request.fecha_nacimiento,
+        rol: request.requested_role,
+        especialidad: request.especialidad || request.desempeno || null,
+      });
+      if (profileError) {
+        setMsg("No se pudo activar el perfil: " + profileError.message);
+        return;
+      }
+    }
+    const { error } = await supabase.from("access_requests").update({ status, reviewed_by: profile.id, reviewed_at: new Date().toISOString() }).eq("id", request.id);
+    if (error) setMsg("No se pudo actualizar la solicitud: " + error.message);
+    await load();
   }
 
   return (
@@ -89,6 +114,12 @@ export default function EquipoPage() {
           </p>
         )}
       </div>
+      {profile?.rol === "admin" && requests.length > 0 && (
+        <div className="card border-cyan-200 bg-cyan-50/40">
+          <div className="mb-4 flex items-center justify-between gap-3"><div><h3 className="text-lg font-bold text-slate-800">Solicitudes de acceso</h3><p className="mt-1 text-sm text-slate-500">Aprueba el personal antes de habilitar su cuenta.</p></div><span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-bold text-cyan-700">{requests.length} pendientes</span></div>
+          <div className="space-y-3">{requests.map((request) => <div key={request.id} className="flex flex-col gap-4 rounded-2xl border border-cyan-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-slate-800">{request.nombre} {request.apellido}</p><p className="text-sm text-slate-600">{request.email}</p><p className="text-xs text-slate-500">{request.especialidad} · {request.desempeno} · Nacimiento: {request.fecha_nacimiento}</p></div><div className="flex shrink-0 gap-2"><button className="btn-secondary" onClick={() => resolverSolicitud(request, "rejected")}>Rechazar</button><button className="btn" onClick={() => resolverSolicitud(request, "approved")}>Dar visto bueno</button></div></div>)}</div>
+        </div>
+      )}
     </div>
   );
 }

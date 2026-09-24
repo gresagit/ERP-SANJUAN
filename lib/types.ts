@@ -3,8 +3,25 @@ export type StaffRole = "admin" | "doctor" | "enfermera" | "fisioterapeuta" | "n
 export type Profile = {
   id: string;
   nombre: string;
+  apellido?: string | null;
+  fecha_nacimiento?: string | null;
   rol: StaffRole;
   especialidad: string | null;
+};
+
+export type AccessRequest = {
+  id: string;
+  user_id: string;
+  email: string;
+  nombre: string;
+  apellido: string;
+  fecha_nacimiento: string;
+  especialidad: string;
+  desempeno: string;
+  requested_role: StaffRole;
+  status: "pending" | "approved" | "rejected";
+  reviewed_at: string | null;
+  created_at: string;
 };
 
 export type Paciente = {
