@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { ROLE_LABEL, type Consulta, type Paciente, type Profile } from "@/lib/types";
+import { ROLE_LABEL, type Consulta, type Paciente, type Profile, type Receta } from "@/lib/types";
 import { descargarPlanTratamiento, descargarResumenExpediente } from "@/lib/pdf";
 
 function todayISO() {
@@ -27,6 +27,7 @@ export default function ExpedientePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [paciente, setPaciente] = useState<Paciente | null>(null);
   const [consultas, setConsultas] = useState<Consulta[]>([]);
+  const [recetas, setRecetas] = useState<Receta[]>([]);
   const [staff, setStaff] = useState<Profile[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -39,6 +40,8 @@ export default function ExpedientePage() {
   const [area, setArea] = useState("");
   const [profesionalCanaliza, setProfesionalCanaliza] = useState("");
   const [motivoCanaliza, setMotivoCanaliza] = useState("");
+  const [receta, setReceta] = useState({ medicamento: "", dosis: "", frecuencia: "", duracion: "", indicaciones: "" });
+  const [savingReceta, setSavingReceta] = useState(false);
 
   async function load() {
     const { data: userData } = await supabase.auth.getUser();
@@ -56,6 +59,14 @@ export default function ExpedientePage() {
       .order("fecha", { ascending: false });
     setConsultas((cons as Consulta[]) || []);
 
+    const { data: recetasData } = await supabase
+      .from("recetas")
+      .select("*")
+      .eq("paciente_id", pacienteId)
+      .order("fecha", { ascending: false })
+      .order("created_at", { ascending: false });
+    setRecetas((recetasData as Receta[]) || []);
+
     const { data: allStaff } = await supabase.from("profiles").select("*").order("nombre");
     setStaff((allStaff as Profile[]) || []);
   }
@@ -65,6 +76,7 @@ export default function ExpedientePage() {
     const channel = supabase
       .channel("expediente-" + pacienteId)
       .on("postgres_changes", { event: "*", schema: "public", table: "consultas", filter: `paciente_id=eq.${pacienteId}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "recetas", filter: `paciente_id=eq.${pacienteId}` }, load)
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -103,6 +115,21 @@ export default function ExpedientePage() {
     setArea("");
     setProfesionalCanaliza("");
     setMotivoCanaliza("");
+  }
+
+  async function guardarReceta(e: React.FormEvent) {
+    e.preventDefault();
+    if (!profile) return;
+    setSavingReceta(true);
+    await supabase.from("recetas").insert({
+      paciente_id: pacienteId,
+      doctor_id: profile.id,
+      doctor_nombre: profile.nombre,
+      ...receta,
+    });
+    setReceta({ medicamento: "", dosis: "", frecuencia: "", duracion: "", indicaciones: "" });
+    setSavingReceta(false);
+    await load();
   }
 
   if (!paciente) return <p className="text-sm text-neutral-600">Cargando expediente…</p>;
@@ -229,6 +256,33 @@ export default function ExpedientePage() {
           </p>
         </div>
       )}
+
+      {profile?.rol === "doctor" && (
+        <div className="card">
+          <div className="mb-5">
+            <h2 className="font-serif text-xl text-slate-800">Nueva receta médica</h2>
+            <p className="mt-1 text-sm text-slate-500">Agrega cada indicación al expediente del paciente.</p>
+          </div>
+          <form onSubmit={guardarReceta} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="field"><label>Medicamento</label><input required value={receta.medicamento} onChange={(e) => setReceta({ ...receta, medicamento: e.target.value })} placeholder="Nombre y presentación" /></div>
+              <div className="field"><label>Dosis</label><input required value={receta.dosis} onChange={(e) => setReceta({ ...receta, dosis: e.target.value })} placeholder="Ej. 500 mg" /></div>
+              <div className="field"><label>Frecuencia</label><input required value={receta.frecuencia} onChange={(e) => setReceta({ ...receta, frecuencia: e.target.value })} placeholder="Ej. cada 8 horas" /></div>
+              <div className="field"><label>Duración</label><input required value={receta.duracion} onChange={(e) => setReceta({ ...receta, duracion: e.target.value })} placeholder="Ej. 7 días" /></div>
+            </div>
+            <div className="field"><label>Indicaciones adicionales</label><textarea value={receta.indicaciones} onChange={(e) => setReceta({ ...receta, indicaciones: e.target.value })} placeholder="Tomar después de alimentos, reposo, señales de alarma…" /></div>
+            <button className="btn" type="submit" disabled={savingReceta}>{savingReceta ? "Guardando…" : "Guardar receta"}</button>
+          </form>
+        </div>
+      )}
+
+      <div className="card">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div><h2 className="font-serif text-xl text-slate-800">Recetas médicas</h2><p className="mt-1 text-sm text-slate-500">Historial de indicaciones prescritas.</p></div>
+          <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-700">{recetas.length} recetas</span>
+        </div>
+        {recetas.length ? <div className="space-y-3">{recetas.map((r) => <article key={r.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-bold text-slate-800">{r.medicamento}</p><p className="text-sm text-slate-600">{r.dosis} · {r.frecuencia} · {r.duracion}</p></div><p className="text-xs text-slate-500">{fmtDate(r.fecha)} · {r.doctor_nombre || "Médico"}</p></div>{r.indicaciones && <p className="mt-2 text-sm text-slate-600"><strong>Indicaciones:</strong> {r.indicaciones}</p>}</article>)}</div> : <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm text-slate-500">Sin recetas registradas todavía.</p>}
+      </div>
 
       <div className="card">
         <h2 className="font-serif text-xl mb-3">Historial de consultas</h2>

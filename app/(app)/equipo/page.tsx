@@ -39,18 +39,22 @@ export default function EquipoPage() {
   }
 
   return (
-    <>
+    <div className="space-y-6">
+      <header>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Administración</p>
+        <h2 className="font-serif text-3xl text-slate-800">Equipo del consultorio</h2>
+      </header>
       <div className="card">
-        <h2 className="font-serif text-xl">Equipo del consultorio</h2>
-        <p className="text-sm text-neutral-600 mb-3">
+        <p className="mb-5 max-w-2xl text-sm leading-6 text-slate-500">
           Cada persona crea su propia cuenta desde la pantalla de registro (correo y contraseña) y completa su
           perfil. Aquí solo se ve el equipo ya dado de alta.
         </p>
-        {msg && <p className="text-sm text-red-700 mb-2">{msg}</p>}
+        {msg && <p className="mb-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{msg}</p>}
         {staff.length ? (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[620px] text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase text-neutral-500 border-b-2 border-[var(--line)]">
+              <tr className="border-b-2 border-slate-200 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                 <th className="py-2">Nombre</th>
                 <th>Rol</th>
                 <th>Especialidad</th>
@@ -59,15 +63,15 @@ export default function EquipoPage() {
             </thead>
             <tbody>
               {staff.map((p) => (
-                <tr key={p.id} className="border-b border-[var(--line)]">
-                  <td className="py-2">{p.nombre}</td>
+                <tr key={p.id} className="border-b border-slate-100">
+                  <td className="py-3 font-semibold text-slate-700">{p.nombre}</td>
                   <td>
                     <span className="pill bg-teal-100 text-teal-700">{ROLE_LABEL[p.rol]}</span>
                   </td>
-                  <td>{p.especialidad || "—"}</td>
+                  <td className="text-slate-600">{p.especialidad || "—"}</td>
                   <td>
                     {p.id !== profile?.id ? (
-                      <button className="text-red-700 text-xs" onClick={() => eliminarMiembro(p.id)}>
+                        <button className="text-xs font-semibold text-rose-700 hover:text-rose-800" onClick={() => eliminarMiembro(p.id)}>
                         Eliminar
                       </button>
                     ) : (
@@ -78,12 +82,13 @@ export default function EquipoPage() {
               ))}
             </tbody>
           </table>
+          </div>
         ) : (
           <p className="text-sm text-neutral-500 border border-dashed border-[var(--line)] rounded-lg p-4 text-center">
             Sin personal registrado.
           </p>
         )}
       </div>
-    </>
+    </div>
   );
 }

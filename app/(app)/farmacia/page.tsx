@@ -158,12 +158,25 @@ export default function FarmaciaPage() {
   }
 
   return (
-    <>
+    <div className="space-y-6">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Operación</p>
+          <h2 className="font-serif text-3xl text-slate-800">Farmacia</h2>
+        </div>
+        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm text-emerald-800">
+          {meds.length} productos en catálogo
+        </span>
+      </header>
+
       <div className="card">
-        <div className="flex justify-between items-center flex-wrap gap-2">
-          <h2 className="font-serif text-xl">Catálogo de medicamentos</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-bold text-slate-800">Catálogo de medicamentos</h3>
+            <p className="mt-1 text-sm text-slate-500">Controla existencias, precios y caducidades.</p>
+          </div>
           <button className="btn-secondary" onClick={() => setShowMedForm((v) => !v)}>
-            + Agregar medicamento
+            {showMedForm ? "Cerrar formulario" : "+ Agregar medicamento"}
           </button>
         </div>
         {showMedForm && (
@@ -214,11 +227,11 @@ export default function FarmaciaPage() {
             </button>
           </form>
         )}
-        <div className="overflow-x-auto mt-3">
+        <div className="mt-5 overflow-x-auto">
           {meds.length ? (
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[700px] text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase text-neutral-500 border-b-2 border-[var(--line)]">
+                <tr className="border-b-2 border-slate-200 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                   <th className="py-2">Medicamento</th>
                   <th>Presentación</th>
                   <th>Stock</th>
@@ -229,14 +242,14 @@ export default function FarmaciaPage() {
               </thead>
               <tbody>
                 {meds.map((m) => (
-                  <tr key={m.id} className="border-b border-[var(--line)]">
-                    <td className="py-2">{m.nombre}</td>
-                    <td>{m.presentacion || "—"}</td>
-                    <td className={m.stock <= 5 ? "text-red-700 font-bold" : ""}>{m.stock}</td>
-                    <td>{money(m.precio)}</td>
-                    <td>{fmtDate(m.caducidad)}</td>
+                  <tr key={m.id} className="border-b border-slate-100">
+                    <td className="py-3 font-semibold text-slate-700">{m.nombre}</td>
+                    <td className="text-slate-600">{m.presentacion || "—"}</td>
+                    <td><span className={`pill ${m.stock <= 5 ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>{m.stock}</span></td>
+                    <td className="font-semibold text-slate-700">{money(m.precio)}</td>
+                    <td className="text-slate-600">{fmtDate(m.caducidad)}</td>
                     <td>
-                      <button className="text-red-700 text-xs" onClick={() => eliminarMedicamento(m.id)}>
+                      <button className="text-xs font-semibold text-rose-700 hover:text-rose-800" onClick={() => eliminarMedicamento(m.id)}>
                         Eliminar
                       </button>
                     </td>
@@ -253,8 +266,9 @@ export default function FarmaciaPage() {
       </div>
 
       <div className="card">
-        <h2 className="font-serif text-xl">Registrar venta</h2>
-        <div className="grid sm:grid-cols-2 gap-3 mt-2">
+        <h3 className="text-lg font-bold text-slate-800">Registrar venta</h3>
+        <p className="mt-1 text-sm text-slate-500">Agrega productos al ticket y genera el comprobante.</p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div className="field">
             <label>Medicamento</label>
             <select value={selMed} onChange={(e) => setSelMed(e.target.value)}>
@@ -270,7 +284,7 @@ export default function FarmaciaPage() {
             <input type="number" min={1} value={selCant} onChange={(e) => setSelCant(Number(e.target.value) || 1)} />
           </div>
         </div>
-        <button className="btn-secondary mt-1" type="button" onClick={agregarAlCarrito}>
+        <button className="btn-secondary mt-3" type="button" onClick={agregarAlCarrito}>
           Agregar al ticket
         </button>
 
@@ -279,18 +293,18 @@ export default function FarmaciaPage() {
             {cart.map((l, i) => {
               const m = meds.find((x) => x.id === l.medId);
               return (
-                <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center py-1.5 border-b border-[var(--line)] text-sm">
-                  <span>{m?.nombre || "?"}</span>
-                  <span>x{l.cantidad}</span>
-                  <span>{m ? money(m.precio * l.cantidad) : ""}</span>
-                  <button className="text-red-700 text-xs" onClick={() => quitarDelCarrito(i)}>
+                <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 border-b border-slate-100 py-3 text-sm">
+                  <span className="font-medium text-slate-700">{m?.nombre || "?"}</span>
+                  <span className="text-slate-500">x{l.cantidad}</span>
+                  <span className="font-semibold text-slate-700">{m ? money(m.precio * l.cantidad) : ""}</span>
+                  <button className="text-xs font-semibold text-rose-700" onClick={() => quitarDelCarrito(i)}>
                     Quitar
                   </button>
                 </div>
               );
             })}
-            <div className="flex justify-between items-center mt-3">
-              <strong>Total: {money(cartTotal)}</strong>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3">
+              <strong className="text-slate-800">Total: {money(cartTotal)}</strong>
               <button className="btn" onClick={cobrar} disabled={cobrando}>
                 {cobrando ? "Procesando…" : "Cobrar y generar ticket"}
               </button>
@@ -300,11 +314,11 @@ export default function FarmaciaPage() {
       </div>
 
       <div className="card">
-        <h2 className="font-serif text-xl mb-3">Ventas recientes</h2>
+        <h3 className="mb-4 text-lg font-bold text-slate-800">Ventas recientes</h3>
         {ventas.length ? (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase text-neutral-500 border-b-2 border-[var(--line)]">
+              <tr className="border-b-2 border-slate-200 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                 <th className="py-2">Folio</th>
                 <th>Fecha</th>
                 <th>Total</th>
@@ -314,13 +328,13 @@ export default function FarmaciaPage() {
             </thead>
             <tbody>
               {ventas.map((v) => (
-                <tr key={v.id} className="border-b border-[var(--line)]">
-                  <td className="py-2">#{v.folio}</td>
+                  <tr key={v.id} className="border-b border-slate-100">
+                    <td className="py-3 font-semibold text-slate-700">#{v.folio}</td>
                   <td>
                     {fmtDate(v.fecha)} {v.hora?.slice(0, 5)}
                   </td>
-                  <td>{money(v.total)}</td>
-                  <td>{v.vendedor_nombre}</td>
+                  <td className="font-semibold text-slate-700">{money(v.total)}</td>
+                  <td className="text-slate-600">{v.vendedor_nombre}</td>
                   <td>
                     <button className="text-teal-700 underline text-xs font-semibold" onClick={() => reimprimir(v.id)}>
                       Reimprimir ticket
@@ -329,13 +343,13 @@ export default function FarmaciaPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         ) : (
           <p className="text-sm text-neutral-500 border border-dashed border-[var(--line)] rounded-lg p-4 text-center">
             Aún no hay ventas registradas.
           </p>
         )}
       </div>
-    </>
+    </div>
   );
 }

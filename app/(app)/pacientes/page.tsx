@@ -72,10 +72,22 @@ export default function PacientesPage() {
   const filtered = pacientes.filter((p) => p.nombre.toLowerCase().includes(query.toLowerCase()));
 
   return (
-    <>
+    <div className="space-y-6">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Expedientes</p>
+          <h2 className="font-serif text-3xl text-slate-800">Pacientes</h2>
+        </div>
+        <span className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-sm text-cyan-800">
+          {pacientes.length} registrados
+        </span>
+      </header>
+
       <div className="card">
-        <h2 className="font-serif text-xl">Nuevo paciente</h2>
-        <p className="text-sm text-neutral-600 mb-4">Datos generales del expediente clínico.</p>
+        <div className="mb-5">
+          <h3 className="text-lg font-bold text-slate-800">Nuevo paciente</h3>
+          <p className="mt-1 text-sm text-slate-500">Datos generales del expediente clínico.</p>
+        </div>
         <form onSubmit={crearPaciente} className="space-y-3">
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="field">
@@ -117,8 +129,8 @@ export default function PacientesPage() {
               placeholder="Penicilina, ninguna conocida, etc."
             />
           </div>
-          <fieldset className="border border-[var(--line)] rounded-lg p-3">
-            <legend className="text-xs font-bold text-teal-700 px-1">Antecedentes (NOM-004)</legend>
+          <fieldset className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <legend className="px-1 text-xs font-bold uppercase tracking-[0.14em] text-cyan-700">Antecedentes (NOM-004)</legend>
             <div className="field">
               <label>Heredofamiliares</label>
               <textarea
@@ -153,33 +165,43 @@ export default function PacientesPage() {
       </div>
 
       <div className="card">
-        <h2 className="font-serif text-xl mb-3">Pacientes registrados</h2>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-lg font-bold text-slate-800">Pacientes registrados</h3>
+          <span className="text-sm text-slate-500">Busca por nombre</span>
+        </div>
         <input
-          className="mb-3 w-full rounded-lg border border-[var(--line)] bg-sand-100 px-3 py-2 text-sm"
+          className="mb-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
           placeholder="Buscar por nombre…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         {filtered.length ? (
-          filtered.map((p) => (
-            <div key={p.id} className="border border-[var(--line)] rounded-lg p-3 mb-2 flex justify-between items-start gap-2 flex-wrap">
-              <div>
-                <p className="font-semibold">{p.nombre}</p>
-                <p className="text-xs text-neutral-600">
+          <div className="space-y-3">
+            {filtered.map((p) => (
+            <div key={p.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-100 text-sm font-bold text-cyan-700">
+                  {p.nombre.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                <p className="font-semibold text-slate-700">{p.nombre}</p>
+                <p className="text-xs text-slate-500">
                   {p.sexo || "—"} · {p.telefono || "sin teléfono"} · Nac. {fmtDate(p.fecha_nacimiento)}
                 </p>
+                </div>
               </div>
               <Link href={`/pacientes/${p.id}`} className="btn-secondary">
                 Abrir expediente
               </Link>
             </div>
-          ))
+            ))}
+          </div>
         ) : (
           <p className="text-sm text-neutral-500 border border-dashed border-[var(--line)] rounded-lg p-4 text-center">
             No hay pacientes registrados aún.
           </p>
         )}
       </div>
-    </>
+    </div>
   );
 }

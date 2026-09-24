@@ -41,6 +41,21 @@ export type Consulta = {
   canaliza_estado: string | null;
 };
 
+export type Receta = {
+  id: string;
+  paciente_id: string;
+  consulta_id: string | null;
+  doctor_id: string | null;
+  doctor_nombre: string | null;
+  fecha: string;
+  medicamento: string;
+  dosis: string;
+  frecuencia: string;
+  duracion: string;
+  indicaciones: string | null;
+  created_at: string;
+};
+
 export type Cita = {
   id: string;
   profesional_id: string | null;

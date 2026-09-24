@@ -25,38 +25,49 @@ export default function NavBar({ profile }: { profile: Profile }) {
   }
 
   return (
-    <header className="bg-gradient-to-b from-teal-900 to-teal-700 text-sand-50 border-b-[3px] border-ochre-500 sticky top-0 z-20 pt-[env(safe-area-inset-top,0px)]">
-      <div className="max-w-5xl mx-auto px-4 pt-3 pb-3 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl">🩺</span>
+    <header className="sticky top-0 z-30 border-b border-slate-200 bg-slate-950/95 text-slate-50 shadow-[0_10px_30px_rgba(8,15,31,0.18)] backdrop-blur-sm">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-400 to-cyan-500 text-xl shadow-lg shadow-cyan-500/20">
+            🩺
+          </div>
           <div>
-            <h1 className="font-serif text-lg font-semibold m-0">Consultorio San Juan</h1>
-            <small className="opacity-75 text-xs block">Farmacia · Expedientes · Equipo</small>
+            <h1 className="font-serif text-lg font-semibold tracking-tight text-white">Consultorio San Juan</h1>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-300">Farmacia · Expedientes · Equipo</p>
           </div>
         </div>
+
         <div className="flex items-center gap-2 text-sm">
-          <span className="bg-white/10 border border-white/30 rounded-full px-3 py-1.5 flex items-center gap-2">
-            {profile.nombre} <span className="opacity-70 text-xs">· {ROLE_LABEL[profile.rol]}</span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-slate-100">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            <span className="font-medium">{profile.nombre}</span>
+            <span className="text-[10px] uppercase tracking-[0.16em] text-slate-300">{ROLE_LABEL[profile.rol]}</span>
           </span>
-          <button onClick={signOut} className="btn-ghost">
+          <button onClick={signOut} className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-100 transition hover:bg-white/10">
             Cerrar sesión
           </button>
         </div>
       </div>
-      <nav className="max-w-5xl mx-auto px-4 flex gap-1 overflow-x-auto">
-        {TABS.map((t) => (
-          <Link
-            key={t.href}
-            href={t.href}
-            className={`px-3.5 py-2 text-sm font-semibold rounded-t-md border-b-[3px] whitespace-nowrap ${
-              pathname?.startsWith(t.href)
-                ? "bg-white text-teal-700 border-ochre-500"
-                : "text-white/80 border-transparent hover:bg-white/10"
-            }`}
-          >
-            {t.label}
-          </Link>
-        ))}
+
+      <nav className="mx-auto max-w-7xl border-t border-white/10 px-4 sm:px-6 lg:px-8">
+        <div className="flex gap-1 overflow-x-auto py-2">
+          {TABS.map((t) => {
+            const active = pathname?.startsWith(t.href);
+            return (
+              <Link
+                key={t.href}
+                href={t.href}
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  active
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-300 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                {t.label}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
     </header>
   );

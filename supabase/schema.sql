@@ -97,6 +97,28 @@ create policy "consultas_staff_all" on public.consultas
   for all using (public.is_staff()) with check (public.is_staff());
 
 -- ---------------------------------------------------------------------
+-- RECETAS (indicaciones médicas por paciente)
+-- ---------------------------------------------------------------------
+create table if not exists public.recetas (
+  id uuid primary key default gen_random_uuid(),
+  paciente_id uuid not null references public.pacientes(id) on delete cascade,
+  consulta_id uuid references public.consultas(id) on delete set null,
+  doctor_id uuid references public.profiles(id),
+  doctor_nombre text,
+  fecha date not null default current_date,
+  medicamento text not null,
+  dosis text not null,
+  frecuencia text not null,
+  duracion text not null,
+  indicaciones text,
+  created_at timestamptz not null default now()
+);
+alter table public.recetas enable row level security;
+drop policy if exists "recetas_staff_all" on public.recetas;
+create policy "recetas_staff_all" on public.recetas
+  for all using (public.is_staff()) with check (public.is_staff());
+
+-- ---------------------------------------------------------------------
 -- CITAS (agenda)
 -- ---------------------------------------------------------------------
 create table if not exists public.citas (
@@ -169,6 +191,7 @@ create policy "venta_items_staff_all" on public.venta_items
 -- ---------------------------------------------------------------------
 alter publication supabase_realtime add table public.pacientes;
 alter publication supabase_realtime add table public.consultas;
+alter publication supabase_realtime add table public.recetas;
 alter publication supabase_realtime add table public.citas;
 alter publication supabase_realtime add table public.medicamentos;
 alter publication supabase_realtime add table public.ventas;

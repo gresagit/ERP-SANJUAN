@@ -20,9 +20,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!profile) redirect("/onboarding");
 
   return (
-    <div>
+    <div className="min-h-screen bg-slate-100 text-slate-800">
       <NavBar profile={profile as Profile} />
-      <main className="max-w-5xl mx-auto px-4 pb-16 pt-5">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
+        <div className="rounded-[28px] border border-slate-200 bg-white/80 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+          <div className="p-4 sm:p-6 lg:p-8">{children}</div>
+        </div>
+      </main>
     </div>
   );
 }
