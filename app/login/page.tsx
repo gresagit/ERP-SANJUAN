@@ -20,7 +20,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      setError("Correo o contraseña incorrectos.");
+      setError(error.message || "Correo o contraseña incorrectos.");
       return;
     }
     router.push("/dashboard");
@@ -41,11 +41,11 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="field">
             <label>Correo</label>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="field">
             <label>Contraseña</label>
-            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
           <button className="btn w-full" type="submit" disabled={loading}>

@@ -71,8 +71,8 @@ export default function SignupPage() {
         <p className="mb-6 text-sm text-slate-500">Solicita acceso al sistema del consultorio.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="field"><label>Nombre</label><input required value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
-            <div className="field"><label>Apellido</label><input required value={apellido} onChange={(e) => setApellido(e.target.value)} /></div>
+            <div className="field"><label>Nombre</label><input required autoComplete="given-name" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
+            <div className="field"><label>Apellido</label><input required autoComplete="family-name" value={apellido} onChange={(e) => setApellido(e.target.value)} /></div>
           </div>
           <div className="field"><label>Fecha de nacimiento</label><input type="date" required value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} /></div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -82,7 +82,7 @@ export default function SignupPage() {
           <div className="field"><label>Tipo de acceso solicitado</label><select value={requestedRole} onChange={(e) => setRequestedRole(e.target.value as StaffRole)}><option value="doctor">Médico general</option><option value="fisioterapeuta">Fisioterapia</option><option value="nutriologo">Nutriología</option><option value="enfermera">Enfermería</option><option value="recepcion">Recepción</option><option value="farmacia">Farmacia</option></select></div>
           <div className="field">
             <label>Correo</label>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="field">
             <label>Contraseña</label>
@@ -90,6 +90,7 @@ export default function SignupPage() {
               type="password"
               required
               minLength={6}
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
