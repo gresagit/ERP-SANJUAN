@@ -234,6 +234,43 @@ create policy "recetas_doctor_update" on public.recetas
   for update using (public.is_staff() and doctor_id = auth.uid()) with check (public.is_staff() and doctor_id = auth.uid());
 
 -- ---------------------------------------------------------------------
+-- SERVICIO_PLANES + SERVICIO_PAGOS (cobro de tratamientos)
+-- ---------------------------------------------------------------------
+create table if not exists public.servicio_planes (
+  id uuid primary key default gen_random_uuid(),
+  paciente_id uuid not null references public.pacientes(id) on delete cascade,
+  consulta_id uuid references public.consultas(id) on delete set null,
+  creado_por uuid references public.profiles(id),
+  creado_por_nombre text,
+  concepto text not null,
+  total_amount numeric(12,2) not null check (total_amount > 0),
+  total_months integer not null check (total_months > 0),
+  monthly_amount numeric(12,2) not null check (monthly_amount > 0),
+  start_date date not null default current_date,
+  status text not null default 'active' check (status in ('active', 'completed', 'cancelled')),
+  created_at timestamptz not null default now()
+);
+create table if not exists public.servicio_pagos (
+  id uuid primary key default gen_random_uuid(),
+  plan_id uuid not null references public.servicio_planes(id) on delete cascade,
+  installment_number integer not null,
+  due_date date not null,
+  amount numeric(12,2) not null check (amount > 0),
+  status text not null default 'pending' check (status in ('pending', 'paid', 'cancelled')),
+  paid_at timestamptz,
+  unique (plan_id, installment_number)
+);
+alter table public.servicio_planes enable row level security;
+alter table public.servicio_pagos enable row level security;
+drop policy if exists "servicio_planes_staff_all" on public.servicio_planes;
+create policy "servicio_planes_staff_all" on public.servicio_planes
+  for all using (public.is_staff() and public.can_access_patient(paciente_id)) with check (public.is_staff() and public.can_access_patient(paciente_id));
+drop policy if exists "servicio_pagos_staff_all" on public.servicio_pagos;
+create policy "servicio_pagos_staff_all" on public.servicio_pagos
+  for all using (public.is_staff() and exists (select 1 from public.servicio_planes plan where plan.id = plan_id and public.can_access_patient(plan.paciente_id)))
+  with check (public.is_staff() and exists (select 1 from public.servicio_planes plan where plan.id = plan_id and public.can_access_patient(plan.paciente_id)));
+
+-- ---------------------------------------------------------------------
 -- CITAS (agenda)
 -- ---------------------------------------------------------------------
 create table if not exists public.citas (
@@ -307,6 +344,8 @@ create policy "venta_items_staff_all" on public.venta_items
 alter publication supabase_realtime add table public.pacientes;
 alter publication supabase_realtime add table public.consultas;
 alter publication supabase_realtime add table public.recetas;
+alter publication supabase_realtime add table public.servicio_planes;
+alter publication supabase_realtime add table public.servicio_pagos;
 alter publication supabase_realtime add table public.referral_requests;
 alter publication supabase_realtime add table public.citas;
 alter publication supabase_realtime add table public.medicamentos;

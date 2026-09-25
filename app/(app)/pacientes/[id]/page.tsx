@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { ROLE_LABEL, type Consulta, type Paciente, type Profile, type Receta } from "@/lib/types";
-import { descargarPlanTratamiento, descargarRecetaMedica, descargarResumenExpediente } from "@/lib/pdf";
+import { ROLE_LABEL, type Consulta, type Paciente, type Profile, type Receta, type ServicioPago, type ServicioPlan } from "@/lib/types";
+import { descargarPlanServicio, descargarPlanTratamiento, descargarRecetaMedica, descargarResumenExpediente } from "@/lib/pdf";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -31,6 +31,12 @@ function roleMatchesArea(role: Profile["rol"], selectedArea: string) {
   return true;
 }
 
+function addMonths(value: string, months: number) {
+  const date = new Date(`${value}T12:00:00`);
+  date.setMonth(date.getMonth() + months);
+  return date.toISOString().slice(0, 10);
+}
+
 export default function ExpedientePage() {
   const params = useParams();
   const pacienteId = params.id as string;
@@ -40,6 +46,8 @@ export default function ExpedientePage() {
   const [paciente, setPaciente] = useState<Paciente | null>(null);
   const [consultas, setConsultas] = useState<Consulta[]>([]);
   const [recetas, setRecetas] = useState<Receta[]>([]);
+  const [planes, setPlanes] = useState<ServicioPlan[]>([]);
+  const [pagos, setPagos] = useState<Record<string, ServicioPago[]>>({});
   const [staff, setStaff] = useState<Profile[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -54,6 +62,9 @@ export default function ExpedientePage() {
   const [motivoCanaliza, setMotivoCanaliza] = useState("");
   const [receta, setReceta] = useState({ diagnostico: "", tratamiento: "", medicamento: "", dosis: "", frecuencia: "", duracion: "", indicaciones: "" });
   const [savingReceta, setSavingReceta] = useState(false);
+  const [showCobro, setShowCobro] = useState(false);
+  const [savingCobro, setSavingCobro] = useState(false);
+  const [cobro, setCobro] = useState({ concepto: "", total: "", meses: "1", fechaInicio: todayISO(), consultaId: "" });
 
   async function load() {
     const { data: userData } = await supabase.auth.getUser();
@@ -79,6 +90,24 @@ export default function ExpedientePage() {
       .order("created_at", { ascending: false });
     setRecetas((recetasData as Receta[]) || []);
 
+    const { data: planesData } = await supabase
+      .from("servicio_planes")
+      .select("*")
+      .eq("paciente_id", pacienteId)
+      .order("created_at", { ascending: false });
+    const loadedPlans = (planesData as ServicioPlan[]) || [];
+    setPlanes(loadedPlans);
+    if (loadedPlans.length) {
+      const { data: pagosData } = await supabase.from("servicio_pagos").select("*").in("plan_id", loadedPlans.map((plan) => plan.id)).order("installment_number");
+      const grouped = ((pagosData as ServicioPago[]) || []).reduce<Record<string, ServicioPago[]>>((result, pago) => {
+        result[pago.plan_id] = [...(result[pago.plan_id] || []), pago];
+        return result;
+      }, {});
+      setPagos(grouped);
+    } else {
+      setPagos({});
+    }
+
     const { data: allStaff } = await supabase.from("profiles").select("*").order("nombre");
     setStaff((allStaff as Profile[]) || []);
   }
@@ -89,6 +118,7 @@ export default function ExpedientePage() {
       .channel("expediente-" + pacienteId)
       .on("postgres_changes", { event: "*", schema: "public", table: "consultas", filter: `paciente_id=eq.${pacienteId}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "recetas", filter: `paciente_id=eq.${pacienteId}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "servicio_planes", filter: `paciente_id=eq.${pacienteId}` }, load)
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -171,6 +201,54 @@ export default function ExpedientePage() {
     }
     setReceta({ diagnostico: "", tratamiento: "", medicamento: "", dosis: "", frecuencia: "", duracion: "", indicaciones: "" });
     setSavingReceta(false);
+    await load();
+  }
+
+  async function guardarCobro(e: React.FormEvent) {
+    e.preventDefault();
+    if (!profile || !paciente) return;
+    const total = Number(cobro.total);
+    const meses = Number(cobro.meses);
+    if (!cobro.concepto.trim() || !Number.isFinite(total) || total <= 0 || !Number.isInteger(meses) || meses < 1) {
+      alert("Captura un concepto, un costo total válido y al menos un mes.");
+      return;
+    }
+    setSavingCobro(true);
+    const mensualidad = Math.round((total / meses) * 100) / 100;
+    const { data: plan, error } = await supabase.from("servicio_planes").insert({
+      paciente_id: pacienteId,
+      consulta_id: cobro.consultaId || null,
+      creado_por: profile.id,
+      creado_por_nombre: profile.nombre,
+      concepto: cobro.concepto.trim(),
+      total_amount: total,
+      total_months: meses,
+      monthly_amount: mensualidad,
+      start_date: cobro.fechaInicio,
+    }).select("*").single();
+    if (error || !plan) {
+      alert("No se pudo guardar el plan de cobro. Revisa que la migración 004 esté ejecutada.");
+      setSavingCobro(false);
+      return;
+    }
+    const cuotas = Array.from({ length: meses }, (_, index) => ({
+      plan_id: plan.id,
+      installment_number: index + 1,
+      due_date: addMonths(cobro.fechaInicio, index),
+      amount: index === meses - 1 ? Math.round((total - mensualidad * (meses - 1)) * 100) / 100 : mensualidad,
+      status: "pending",
+    }));
+    const { error: pagosError } = await supabase.from("servicio_pagos").insert(cuotas);
+    if (pagosError) alert("El plan se creó, pero no se pudieron crear todas sus mensualidades.");
+    setCobro({ concepto: "", total: "", meses: "1", fechaInicio: todayISO(), consultaId: "" });
+    setShowCobro(false);
+    setSavingCobro(false);
+    await load();
+  }
+
+  async function marcarPago(pago: ServicioPago) {
+    const nextStatus = pago.status === "paid" ? "pending" : "paid";
+    await supabase.from("servicio_pagos").update({ status: nextStatus, paid_at: nextStatus === "paid" ? new Date().toISOString() : null }).eq("id", pago.id);
     await load();
   }
 
@@ -319,6 +397,15 @@ export default function ExpedientePage() {
           </form>
         </div>
       )}
+
+      <div className="card border-emerald-200 bg-emerald-50/30">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="font-serif text-xl text-slate-800">Cobro de servicio</h2><p className="mt-1 text-sm text-slate-500">Relaciona el tratamiento con un plan total y sus mensualidades.</p></div>
+          <button className="btn-secondary" type="button" onClick={() => setShowCobro((visible) => !visible)}>{showCobro ? "Cerrar formulario" : "+ Nuevo cobro"}</button>
+        </div>
+        {showCobro && <form onSubmit={guardarCobro} className="mt-5 space-y-4"><div className="field"><label>Concepto del servicio</label><input required value={cobro.concepto} onChange={(e) => setCobro({ ...cobro, concepto: e.target.value })} placeholder="Tratamiento de rehabilitación, plan nutricional…" /></div><div className="grid gap-4 md:grid-cols-3"><div className="field"><label>Costo total</label><input required type="number" min="0.01" step="0.01" value={cobro.total} onChange={(e) => setCobro({ ...cobro, total: e.target.value })} placeholder="10000" /></div><div className="field"><label>Meses</label><input required type="number" min="1" step="1" value={cobro.meses} onChange={(e) => setCobro({ ...cobro, meses: e.target.value })} /></div><div className="field"><label>Inicio del plan</label><input required type="date" value={cobro.fechaInicio} onChange={(e) => setCobro({ ...cobro, fechaInicio: e.target.value })} /></div></div><div className="field"><label>Plan de tratamiento relacionado</label><select value={cobro.consultaId} onChange={(e) => setCobro({ ...cobro, consultaId: e.target.value })}><option value="">Seleccionar consulta (opcional)</option>{consultas.map((consulta) => <option key={consulta.id} value={consulta.id}>{fmtDate(consulta.fecha)} · {consulta.diagnostico || consulta.motivo || "Consulta"}</option>)}</select></div><p className="rounded-xl bg-white px-3 py-2 text-sm text-emerald-800">Mensualidad estimada: <strong>{Number(cobro.total) > 0 && Number(cobro.meses) > 0 ? `$${(Number(cobro.total) / Number(cobro.meses)).toFixed(2)}` : "$0.00"}</strong></p><button className="btn" type="submit" disabled={savingCobro}>{savingCobro ? "Generando plan…" : "Guardar plan de cobro"}</button></form>}
+        {planes.length > 0 && <div className="mt-5 space-y-4">{planes.map((plan) => <article key={plan.id} className="rounded-2xl border border-emerald-200 bg-white p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-bold text-slate-800">{plan.concepto}</p><p className="text-sm text-slate-600">{plan.total_months} meses · {plan.monthly_amount.toLocaleString("es-MX", { style: "currency", currency: "MXN" })} al mes · Total {plan.total_amount.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</p><p className="text-xs text-slate-500">Inicio: {fmtDate(plan.start_date)} · Creado por {plan.creado_por_nombre || "—"}</p></div><button className="btn-secondary" onClick={() => descargarPlanServicio(paciente, plan, pagos[plan.id] || [])}>Imprimir plan PDF</button></div><div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{(pagos[plan.id] || []).map((pago) => <button key={pago.id} type="button" onClick={() => marcarPago(pago)} className={`rounded-xl border p-3 text-left transition hover:-translate-y-0.5 ${pago.status === "paid" ? "border-emerald-300 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Mensualidad {pago.installment_number}</p><p className="mt-1 font-bold text-slate-800">{Number(pago.amount).toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</p><p className="text-xs text-slate-600">{fmtDate(pago.due_date)} · {pago.status === "paid" ? "Pagada" : "Pendiente"}</p></button>)}</div><p className="mt-3 text-xs text-slate-500">Haz clic en una mensualidad para cambiarla entre pendiente y pagada.</p></article>)}</div>}
+      </div>
 
       <div className="card">
         <div className="mb-4 flex items-center justify-between gap-3">

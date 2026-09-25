@@ -9,6 +9,7 @@ Run the files in numeric order from the Supabase SQL Editor:
 1. `001_receta_medica.sql`
 2. `002_canalizaciones_y_roles.sql`
 3. `003_solicitudes_de_acceso.sql`
+4. `004_planes_de_servicio.sql`
 
 Each migration is designed to be safe to rerun. Keep the files already executed as history and add the next change with the next number.
 

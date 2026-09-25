@@ -75,6 +75,31 @@ export type Receta = {
   created_at: string;
 };
 
+export type ServicioPlan = {
+  id: string;
+  paciente_id: string;
+  consulta_id: string | null;
+  creado_por: string | null;
+  creado_por_nombre: string | null;
+  concepto: string;
+  total_amount: number;
+  total_months: number;
+  monthly_amount: number;
+  start_date: string;
+  status: "active" | "completed" | "cancelled";
+  created_at: string;
+};
+
+export type ServicioPago = {
+  id: string;
+  plan_id: string;
+  installment_number: number;
+  due_date: string;
+  amount: number;
+  status: "pending" | "paid" | "cancelled";
+  paid_at: string | null;
+};
+
 export type ReferralRequest = {
   id: string;
   paciente_id: string;

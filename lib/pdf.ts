@@ -1,4 +1,4 @@
-import type { Consulta, Paciente, Receta, Venta, VentaItem } from "./types";
+import type { Consulta, Paciente, Receta, ServicioPago, ServicioPlan, Venta, VentaItem } from "./types";
 
 const CLINIC = "Consultorio San Juan";
 
@@ -122,6 +122,50 @@ export async function descargarRecetaMedica(paciente: Paciente, receta: Receta) 
   doc.setTextColor(120);
   doc.text("Documento generado por el sistema interno de " + CLINIC + ".", 14, 285);
   doc.save(`receta-${paciente.nombre.replace(/\s+/g, "_")}-${receta.fecha}.pdf`);
+}
+
+export async function descargarPlanServicio(paciente: Paciente, plan: ServicioPlan, pagos: ServicioPago[]) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF();
+  let y = 20;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text(CLINIC, 14, y);
+  y += 7;
+  doc.setFontSize(12);
+  doc.text("Plan de servicio y pagos", 14, y);
+  y += 10;
+  doc.setDrawColor(180);
+  doc.line(14, y, 196, y);
+  y += 9;
+
+  const line = (label: string, value: string) => {
+    doc.setFont("helvetica", "bold");
+    doc.text(label, 14, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(value || "—", 62, y);
+    y += 7;
+  };
+  line("Paciente:", paciente.nombre);
+  line("Concepto:", plan.concepto);
+  line("Total:", money(plan.total_amount));
+  line("Duración:", `${plan.total_months} meses`);
+  line("Mensualidad:", money(plan.monthly_amount));
+  line("Inicio:", fmtDate(plan.start_date));
+  y += 4;
+  doc.setFont("helvetica", "bold");
+  doc.text("Calendario de pagos", 14, y);
+  y += 8;
+  doc.setFont("helvetica", "normal");
+  pagos.forEach((pago) => {
+    doc.text(`${pago.installment_number}. ${fmtDate(pago.due_date)} — ${money(pago.amount)} — ${pago.status === "paid" ? "Pagado" : "Pendiente"}`, 14, y);
+    y += 7;
+    if (y > 270) { doc.addPage(); y = 20; }
+  });
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text("Documento generado por el sistema interno de " + CLINIC + ".", 14, 285);
+  doc.save(`plan-servicio-${paciente.nombre.replace(/\s+/g, "_")}-${plan.id.slice(0, 8)}.pdf`);
 }
 
 export async function descargarResumenExpediente(paciente: Paciente, consultas: Consulta[]) {
