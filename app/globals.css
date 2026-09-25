@@ -1,24 +1,34 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg: #eef4fb;
-  --panel: rgba(255, 255, 255, 0.9);
+  --sj-navy-900: #1b3447;
+  --sj-blue-500: #2b8bb4;
+  --sj-blue-600: #21708f;
+  --sj-slate-400: #4a6570;
+  --sj-gray-500: #767676;
+  --sj-surface: #f4f6f7;
+  --sj-border: #e2e6e8;
+  --sj-success: #2e9e6b;
+  --sj-warning: #d9a441;
+  --sj-danger: #c24a44;
+  --bg: #f4f6f7;
+  --panel: #ffffff;
   --panel-strong: #ffffff;
-  --line: #dfe7f3;
-  --line-dark: #cfe0f5;
-  --text: #0f172a;
-  --text-soft: #475569;
-  --primary: #0f766e;
-  --primary-strong: #0d9488;
-  --secondary: #1d4ed8;
-  --amber: #f59e0b;
-  --success: #16a34a;
-  --danger: #dc2626;
-  --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --line: #e2e6e8;
+  --line-dark: #c9d4d9;
+  --text: #1b3447;
+  --text-soft: #4a6570;
+  --primary: #2b8bb4;
+  --primary-strong: #21708f;
+  --secondary: #1b3447;
+  --amber: #d9a441;
+  --success: #2e9e6b;
+  --danger: #c24a44;
+  --shadow: 0 10px 30px rgba(27, 52, 71, 0.1);
 }
 
 html {
@@ -26,27 +36,27 @@ html {
 }
 
 body {
-  @apply bg-[radial-gradient(circle_at_top,_#f8fbff,_#eef4fb_45%,_#e7edf9_100%)] text-slate-800;
-  font-family: "Inter", sans-serif;
+  @apply bg-[#f4f6f7] text-[#1b3447];
+  font-family: "Montserrat", sans-serif;
 }
 
 h1,
 h2,
 h3,
 h4 {
-  font-family: "Fraunces", serif;
+  font-family: "Playfair Display", serif;
 }
 
 .card {
-  @apply rounded-[24px] border border-slate-200 bg-white/90 p-5 shadow-[0_10px_30px_rgba(148,163,184,0.12)];
+  @apply rounded-2xl border border-[#e2e6e8] bg-white p-5 shadow-[0_4px_12px_rgba(27,52,71,0.08)];
 }
 
 .btn {
-  @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-teal-700 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60;
+  @apply inline-flex items-center justify-center rounded-[10px] bg-[#2b8bb4] px-4 py-2.5 text-sm font-semibold uppercase tracking-[0.08em] text-white shadow-sm transition hover:bg-[#21708f] disabled:cursor-not-allowed disabled:opacity-60;
 }
 
 .btn-secondary {
-  @apply inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700;
+  @apply inline-flex items-center justify-center rounded-[10px] border border-[#e2e6e8] bg-[#f4f6f7] px-4 py-2.5 text-sm font-semibold text-[#1b3447] transition hover:border-[#2b8bb4] hover:bg-white hover:text-[#21708f];
 }
 
 .btn-ghost {
@@ -58,13 +68,13 @@ h4 {
 }
 
 .field label {
-  @apply mb-1 block text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500;
+  @apply mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#4a6570];
 }
 
 .field input,
 .field select,
 .field textarea {
-  @apply w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100;
+  @apply w-full rounded-[10px] border border-[#e2e6e8] bg-[#f4f6f7] px-3.5 py-2.5 text-sm text-[#1b3447] outline-none transition placeholder:text-[#767676] focus:border-[#2b8bb4] focus:bg-white focus:ring-4 focus:ring-[#2b8bb4]/15;
 }
 
 .field textarea {
@@ -81,14 +91,14 @@ h4 {
 }
 
 ::-webkit-scrollbar-track {
-  background: #edf2f7;
+  background: #f4f6f7;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c7d7ee;
+  background: #b6c7ce;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a7badf;
+  background: #2b8bb4;
 }

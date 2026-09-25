@@ -25,21 +25,20 @@ export default function NavBar({ profile }: { profile: Profile }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-slate-950/95 text-slate-50 shadow-[0_10px_30px_rgba(8,15,31,0.18)] backdrop-blur-sm">
+    <header className="sticky top-0 z-30 border-b border-[#2c4a63] bg-[#1b3447]/[0.98] text-slate-50 shadow-[0_10px_30px_rgba(27,52,71,0.18)] backdrop-blur-sm">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-400 to-cyan-500 text-xl shadow-lg shadow-cyan-500/20">
-            🩺
+          <div className="flex h-11 w-[174px] items-center rounded-[10px] bg-white px-2 shadow-lg shadow-black/10">
+            <img src="/logo-sanjuan-completo.png" alt="SAN JUAN Servicios de Salud" className="h-full w-full object-contain" />
           </div>
           <div>
-            <h1 className="font-serif text-lg font-semibold tracking-tight text-white">Consultorio San Juan</h1>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-300">Farmacia · Expedientes · Equipo</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-slate-300">Sistema interno</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-sm">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-slate-100">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#2e9e6b]" />
             <span className="font-medium">{profile.nombre}</span>
             <span className="text-[10px] uppercase tracking-[0.16em] text-slate-300">{ROLE_LABEL[profile.rol]}</span>
           </span>

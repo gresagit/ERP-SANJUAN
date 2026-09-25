@@ -1,0 +1,92 @@
+/* =========================================================
+   SAN JUAN · Servicios de Salud
+   Design Tokens — extraídos del manual de identidad
+   Para usar en ERP-SANJUAN (frontend)
+   ========================================================= */
+
+:root {
+  /* --- Color primario --- */
+  --sj-navy-900: #1B3447;      /* Azul marino oscuro — fondo principal, texto sobre claro */
+  --sj-blue-500: #2B8BB4;      /* Azul cruz/acento — botones primarios, links, hover */
+  --sj-blue-600: #21708F;      /* Variante hover/pressed del azul */
+  --sj-slate-400: #4A6570;     /* Azul-gris apagado — subtítulos, texto secundario sobre oscuro */
+
+  /* --- Neutros --- */
+  --sj-gray-500: #767676;      /* Gris del logo (variante monocromática) */
+  --sj-black:    #0D0D0D;      /* Negro del logo (variante monocromática) */
+  --sj-white:    #FFFFFF;
+
+  /* --- Superficies --- */
+  --sj-bg-light:     var(--sj-white);
+  --sj-bg-dark:      var(--sj-navy-900);
+  --sj-bg-accent:    var(--sj-blue-500);
+  --sj-surface-card: #F4F6F7;   /* Superficie clara neutra para tarjetas sobre fondo blanco */
+  --sj-border:       #E2E6E8;
+
+  /* --- Texto --- */
+  --sj-text-primary-on-light:   var(--sj-navy-900);
+  --sj-text-secondary-on-light: var(--sj-slate-400);
+  --sj-text-primary-on-dark:    #E6E9EB; /* gris muy claro usado para "SAN JUAN" sobre fondo navy */
+  --sj-text-secondary-on-dark:  var(--sj-slate-400);
+  --sj-text-link:                var(--sj-blue-500);
+
+  /* --- Estado --- */
+  --sj-success: #2E9E6B;
+  --sj-warning: #D9A441;
+  --sj-danger:  #C24A44;
+  --sj-info:    var(--sj-blue-500);
+
+  /* --- Tipografía ---
+     "SAN JUAN" usa una serif elegante (tipo Playfair Display / Cormorant).
+     "SERVICIOS DE SALUD" y textos de UI usan una sans-serif con tracking amplio (tipo Montserrat / Poppins). */
+  --sj-font-display: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+  --sj-font-body: 'Montserrat', 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --sj-tracking-wide: 0.12em;   /* usado en "SERVICIOS DE SALUD" y labels de UI */
+  --sj-tracking-normal: 0em;
+
+  /* --- Radios y sombras (estilo del logo: esquinas limpias, ligeramente redondeadas) --- */
+  --sj-radius-sm: 6px;
+  --sj-radius-md: 10px;
+  --sj-radius-lg: 16px;
+  --sj-shadow-sm: 0 1px 2px rgba(27,52,71,0.06);
+  --sj-shadow-md: 0 4px 12px rgba(27,52,71,0.10);
+  --sj-shadow-lg: 0 10px 30px rgba(27,52,71,0.16);
+}
+
+/* Tema oscuro (paneles tipo login / hero, replicando el fondo navy del manual) */
+[data-theme="dark"] {
+  --sj-bg-light: var(--sj-navy-900);
+  --sj-text-primary-on-light: var(--sj-text-primary-on-dark);
+  --sj-text-secondary-on-light: var(--sj-text-secondary-on-dark);
+  --sj-surface-card: #22405A;
+  --sj-border: #2C4A63;
+}
+
+/* Utilidades rápidas */
+.sj-btn-primary {
+  background: var(--sj-blue-500);
+  color: var(--sj-white);
+  border-radius: var(--sj-radius-md);
+  font-family: var(--sj-font-body);
+  font-weight: 600;
+  letter-spacing: var(--sj-tracking-wide);
+  text-transform: uppercase;
+  border: none;
+  transition: background 0.15s ease;
+}
+.sj-btn-primary:hover { background: var(--sj-blue-600); }
+
+.sj-heading {
+  font-family: var(--sj-font-display);
+  color: var(--sj-navy-900);
+  letter-spacing: 0.02em;
+}
+
+.sj-eyebrow {
+  font-family: var(--sj-font-body);
+  font-size: 0.75rem;
+  letter-spacing: var(--sj-tracking-wide);
+  text-transform: uppercase;
+  color: var(--sj-slate-400);
+}

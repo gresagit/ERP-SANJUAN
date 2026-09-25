@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Consultorio San Juan",
-  description: "Sistema interno de farmacia y expediente médico",
+  title: "SAN JUAN · Servicios de salud",
+  description: "Sistema interno de atención, expedientes y agenda de San Juan Servicios de Salud",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

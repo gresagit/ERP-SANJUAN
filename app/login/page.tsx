@@ -29,14 +29,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_#ccfbf1,_transparent_35%),radial-gradient(circle_at_bottom_right,_#dbeafe,_transparent_40%)] px-4 py-8">
-      <div className="w-full max-w-md rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.14)] backdrop-blur sm:p-8">
-        <div className="mb-7 flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-xl text-white shadow-lg shadow-cyan-500/20">🩺</div>
-          <div>
-            <h1 className="font-serif text-2xl text-slate-800">Consultorio San Juan</h1>
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Acceso del personal</p>
-          </div>
+    <div className="flex min-h-screen items-center justify-center bg-[#1b3447] px-4 py-8">
+      <div className="w-full max-w-md rounded-2xl border border-[#2c4a63] bg-white p-6 shadow-[0_10px_30px_rgba(0,0,0,0.2)] sm:p-8">
+        <div className="mb-7 rounded-xl border border-[#e2e6e8] bg-white p-3">
+          <img src="/logo-sanjuan-completo.png" alt="SAN JUAN Servicios de Salud" className="h-auto w-full" />
         </div>
         <p className="mb-6 text-sm text-slate-500">Inicia sesión con tu cuenta del consultorio.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
